@@ -8,7 +8,7 @@ import os
 from dotenv import load_dotenv
 from base64 import b64encode
 import certifi
-from logger import Logger
+from src.logging.logger import Logger
 import json
 from pathlib import Path
 

@@ -5,8 +5,8 @@ This module provides the AssetProcessor class which implements business rules
 for processing and updating assets in the Jira Assets API.
 """
 from typing import Dict, List, Any, Optional
-from jira.assets_client import AssetsClient
-from logger import Logger
+from ..asset_client import AssetsClient  # Fixed path from main jira_core package
+from ...logging.logger import Logger
 
 class AssetProcessor:
     """

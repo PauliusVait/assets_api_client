@@ -5,16 +5,16 @@ This module provides the AssetsClient class which implements the core
 functionality for interacting with the Jira Assets API, including
 querying, retrieving, and updating assets.
 """
-from .base_client import BaseClient
+from .client_base import BaseClient
 from .models.asset import Asset
 from .models.attribute_mapper import AttributeMapper
 from .exceptions import AssetsError, InvalidUpdateError, SchemaError, InvalidQueryError
 from .api.base_handler import BaseHandler
-from .api.discover_workspace import discover_workspace
-from .api.discover_schema import discover_schema
-from .api.get_objects_aql import get_objects_aql as get_objects_aql_func
-from .api.get_object import get_object as get_object_func
-from .api.update_object import update_object as update_object_func
+from .api.workspace_discovery import discover_workspace
+from .api.schema_discovery import discover_schema
+from .api.asset_query import get_objects_aql as get_objects_aql_func
+from .api.asset_retrieval import get_object as get_object_func
+from .api.asset_update import update_object as update_object_func
 import re
 
 class AssetsClient(BaseClient):

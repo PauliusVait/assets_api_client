@@ -21,17 +21,28 @@ A Python client for interacting with the Jira Assets API.
 
 ```
 assets_api_client/
-├── cli/               # CLI command handlers
-├── jira/              # Jira API integration
-│   ├── exceptions.py  # Custom exception classes
-│   └── ...
-├── logs/              # Log files directory
-├── cache/             # Schema cache directory
-├── .env               # Environment variables
-├── main.py            # Entry point
-├── README.md          # This file
-├── requirements.txt   # Dependencies
-└── setup.sh           # Setup script
+├── src/                # Source code directory
+│   ├── cli/            # CLI command handlers
+│   │   ├── commands/   # Individual command implementations
+│   │   └── ...
+│   ├── core/           # Core business logic
+│   │   ├── api/        # API client components
+│   │   ├── models/     # Data models
+│   │   ├── services/   # Service layer between API and CLI
+│   │   └── ...
+│   └── logging/        # Logging utilities
+│
+├── tests/              # Test directory
+│   ├── unit/           # Unit tests
+│   └── integration/    # Integration tests
+│
+├── logs/               # Log files directory
+├── cache/              # Schema cache directory
+├── .env                # Environment variables
+├── main.py             # Entry point
+├── README.md           # This file
+├── requirements.txt    # Dependencies
+└── setup.sh            # Setup script
 ```
 
 ## Usage
@@ -105,3 +116,15 @@ If you encounter any issues:
 2. Check that your API token has the necessary permissions
 3. Enable debug mode with `--debug` for more detailed logs
 4. Try refreshing the schema cache with `--refresh-cache` if object types have changed
+
+## Testing
+
+Run the test suite:
+```bash
+pytest
+```
+
+Generate test coverage report:
+```bash
+pytest --cov=src tests/
+```

@@ -4,9 +4,9 @@ Asset processing command for the Assets CLI.
 This module provides the command-line interface for processing
 assets according to defined business rules using the Jira Assets API.
 """
-from ..base import BaseCommand
-from ..formatter import format_asset_output
-from jira.asset_processor import AssetProcessor
+from ..command_base import BaseCommand
+from ..output_formatter import format_asset_output
+from ...jira_core.services.asset_processor import AssetProcessor
 
 class ProcessCommand(BaseCommand):
     """Command to process assets according to business rules"""

@@ -10,3 +10,9 @@ logs/
 .pytest_cache/
 .coverage
 htmlcov/
+cache/
+*.egg-info/
+dist/
+build/
+.eggs/
+coverage.xml

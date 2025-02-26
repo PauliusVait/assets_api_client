@@ -1,11 +1,12 @@
 """
-AQL query functionality for Jira Assets API.
+AQL query functionality for the Jira Assets API.
 
-This module provides the ability to query assets using the 
-Atlassian Query Language (AQL), with validation of object types.
+This module provides functions to execute AQL (Atlassian Query Language)
+queries against the Jira Assets API, with support for pagination and
+attribute filtering.
 """
 import re
-from typing import List
+from typing import List, Dict, Any, Optional
 from ..models.asset import Asset
 from ..exceptions import InvalidQueryError, SchemaError
 from .base_handler import BaseHandler

@@ -4,8 +4,8 @@ AQL query command for the Assets CLI.
 This module provides the command-line interface for executing
 AQL (Atlassian Query Language) queries against the Jira Assets API.
 """
-from ..base import BaseCommand
-from ..formatter import format_asset_output
+from ..command_base import BaseCommand
+from ..output_formatter import format_asset_output
 
 class AqlCommand(BaseCommand):
     """Command to execute AQL queries"""

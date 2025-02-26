@@ -4,7 +4,7 @@ Attribute Mapper module for Jira Assets API.
 This module provides functionality to map attribute IDs to their names
 and maintains a cache to optimize performance during attribute lookups.
 """
-from logger import Logger
+from src.logging.logger import Logger
 
 
 class AttributeMapper:

@@ -7,7 +7,7 @@ for standardized error messaging and suggestions across the CLI.
 import json
 import sys
 import traceback
-from jira.exceptions import (
+from src.jira_core.exceptions import (
     AssetNotFoundError, 
     SchemaError, 
     InvalidQueryError,

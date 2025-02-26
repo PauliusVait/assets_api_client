@@ -5,7 +5,7 @@ This module provides functionality to update existing assets in Jira
 by their ID with new attribute values.
 """
 from typing import Dict, List, Union
-from ..models.asset import Asset
+from ..models import Asset
 from ..exceptions import AssetNotFoundError, InvalidUpdateError
 from .base_handler import BaseHandler
 

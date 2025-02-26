@@ -7,8 +7,8 @@ appropriate error handling.
 """
 import argparse
 import sys
-from jira.exceptions import SchemaError, InvalidQueryError, AssetNotFoundError, InvalidUpdateError
-from cli.commands import register_commands, get_command
+from src.jira_core.exceptions import SchemaError, InvalidQueryError, AssetNotFoundError, InvalidUpdateError
+from src.cli.commands import register_commands, get_command
 
 def main():
     """

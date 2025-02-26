@@ -7,8 +7,8 @@ for all command-line interface commands in the Assets CLI.
 import argparse
 from abc import ABC, abstractmethod
 import logging
-from jira.assets_client import AssetsClient
-from logger import Logger
+from ..jira_core.asset_client import AssetsClient  # Make sure this path is correct
+from ..logging.logger import Logger
 from .error_handler import ErrorHandler
 
 class BaseCommand(ABC):

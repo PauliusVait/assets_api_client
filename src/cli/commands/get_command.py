@@ -4,8 +4,8 @@ Asset retrieval command for the Assets CLI.
 This module provides the command-line interface for retrieving
 individual assets by their ID from the Jira Assets API.
 """
-from ..base import BaseCommand
-from ..formatter import format_asset_output
+from ..command_base import BaseCommand
+from ..output_formatter import format_asset_output
 
 class GetCommand(BaseCommand):
     """Command to retrieve a single asset by ID"""

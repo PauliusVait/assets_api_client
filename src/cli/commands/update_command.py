@@ -6,8 +6,8 @@ asset attributes using the Jira Assets API.
 """
 import json
 import sys
-from ..base import BaseCommand
-from ..formatter import format_asset_output
+from ..command_base import BaseCommand
+from ..output_formatter import format_asset_output
 
 class UpdateCommand(BaseCommand):
     """Command to update an asset"""

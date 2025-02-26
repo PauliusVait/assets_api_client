@@ -3,7 +3,7 @@ Single asset retrieval functionality for Jira Assets API.
 
 This module provides functionality to fetch individual assets by their ID.
 """
-from ..models.asset import Asset
+from ..models import Asset
 from ..exceptions import AssetNotFoundError
 from .base_handler import BaseHandler
 
