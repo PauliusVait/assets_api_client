@@ -5,8 +5,10 @@ This module provides the AssetProcessor class which implements business rules
 for processing and updating assets in the Jira Assets API.
 """
 from typing import Dict, List, Any, Optional
-from ..asset_client import AssetsClient  # Fixed path from main jira_core package
+from decimal import Decimal
+from ...jira_core.asset_client import AssetsClient
 from ...logging.logger import Logger
+from .buyout_calculator import BuyoutCalculator
 
 class AssetProcessor:
     """
@@ -28,6 +30,7 @@ class AssetProcessor:
         """
         self.client = client
         self.logger = logger or Logger.configure()
+        self.buyout_calculator = BuyoutCalculator(self.logger)
     
     def process_asset_name(self, asset: Any) -> str:
         """
@@ -114,18 +117,16 @@ class AssetProcessor:
         
         return final_name
     
-    def prepare_asset_updates(self, asset_id: int) -> Dict[str, Any]:
+    def prepare_asset_updates(self, asset_id: int, force_buyout_recalculation: bool = False) -> Dict[str, Any]:
         """
         Prepare updates for a single asset based on business rules.
         
-        Retrieves the current asset data and generates updates according
-        to business rules.
-        
         Args:
-            asset_id (int): ID of the asset to prepare updates for
+            asset_id: ID of the asset to update
+            force_buyout_recalculation: Whether to force recalculation of buyout price
             
         Returns:
-            dict: Dictionary of attribute name/value pairs for the update
+            Dict[str, Any]: Dictionary of attribute updates
         """
         # Get the current asset data
         asset = self.client.get_object(asset_id)
@@ -133,29 +134,89 @@ class AssetProcessor:
             self.logger.error(f"Asset with ID {asset_id} not found")
             return {}
         
-        # Generate the new asset name
-        new_name = self.process_asset_name(asset)
+        # Extract attributes
+        attributes = asset.attributes if hasattr(asset, 'attributes') else {}
+        object_type = asset.object_type if hasattr(asset, 'object_type') else None
         
-        # Prepare updates dictionary
-        updates = {
-            "Name": new_name
-        }
+        updates = {}
+        
+        # Calculate device age if purchase date is available
+        purchase_date = attributes.get('Purchase Date')
+        if purchase_date:
+            device_age_months = self.calculate_device_age_months(purchase_date)
+            updates['Device Age'] = str(device_age_months)
+            
+            # Calculate buyout price if needed
+            purchase_cost = attributes.get('Purchase Cost')
+            current_buyout = attributes.get('Buyout Price')
+            
+            if purchase_cost and object_type:
+                calculated_buyout = self.buyout_calculator.calculate_buyout_price(
+                    purchase_cost, purchase_date, object_type
+                )
+                
+                if calculated_buyout is not None:
+                    # Check if we should update the buyout price
+                    if self.buyout_calculator.should_update_buyout_price(
+                        current_buyout, calculated_buyout, force_buyout_recalculation
+                    ):
+                        self.logger.debug(f"Updating buyout price from {current_buyout} to {calculated_buyout}")
+                        updates['Buyout Price'] = str(calculated_buyout)
+        
+        # Create a copy of the asset with updated attributes for name generation
+        updated_asset = self._create_updated_asset_copy(asset, updates)
+        
+        # Generate the new asset name using the UPDATED attributes
+        new_name = self.process_asset_name(updated_asset)
+        updates["Name"] = new_name
         
         self.logger.debug(f"Prepared updates for asset {asset_id}: {updates}")
         return updates
     
-    def update_single_asset(self, asset_id: int) -> bool:
+    def _create_updated_asset_copy(self, asset: Any, updates: Dict[str, Any]) -> Any:
+        """
+        Create a copy of the asset with the updates applied.
+        This ensures that the name generation uses updated values.
+        
+        Args:
+            asset: The original asset
+            updates: The updates to apply
+            
+        Returns:
+            Any: A copy of the asset with updates applied
+        """
+        # Create a simple copy by making a new object with the same attributes
+        copy = type('AssetCopy', (), {})()
+        
+        # Copy the object_type attribute if it exists
+        if hasattr(asset, 'object_type'):
+            copy.object_type = asset.object_type
+            
+        # Create a copy of the attributes dictionary
+        if hasattr(asset, 'attributes'):
+            copy.attributes = dict(asset.attributes)
+            
+            # Apply the updates to the copied attributes
+            for key, value in updates.items():
+                copy.attributes[key] = value
+        else:
+            copy.attributes = updates
+            
+        return copy
+    
+    def update_single_asset(self, asset_id: int, force_buyout_recalculation: bool = False) -> bool:
         """
         Update a single asset based on business rules.
         
         Args:
-            asset_id (int): ID of the asset to update
+            asset_id: ID of the asset to update
+            force_buyout_recalculation: Whether to force recalculation of buyout price
             
         Returns:
             bool: True if the update was successful, False otherwise
         """
         try:
-            updates = self.prepare_asset_updates(asset_id)
+            updates = self.prepare_asset_updates(asset_id, force_buyout_recalculation)
             if not updates:
                 return False
             
@@ -168,20 +229,35 @@ class AssetProcessor:
             self.logger.error(f"Error updating asset {asset_id}: {str(e)}")
             return False
     
-    def update_multiple_assets(self, asset_ids: List[int]) -> Dict[int, bool]:
+    def update_multiple_assets(self, asset_ids: List[int], force_buyout_recalculation: bool = False) -> Dict[int, bool]:
         """
         Update multiple assets based on business rules.
         
         Args:
-            asset_ids (List[int]): List of asset IDs to update
+            asset_ids: List of asset IDs to update
+            force_buyout_recalculation: Whether to force recalculation of buyout prices
             
         Returns:
-            Dict[int, bool]: Dictionary mapping asset IDs to update status (True=success, False=failure)
+            Dict[int, bool]: Dictionary mapping asset IDs to update status
         """
         results = {}
         for asset_id in asset_ids:
-            results[asset_id] = self.update_single_asset(asset_id)
+            results[asset_id] = self.update_single_asset(asset_id, force_buyout_recalculation)
         
         success_count = sum(1 for status in results.values() if status)
         self.logger.info(f"Updated {success_count} out of {len(asset_ids)} assets")
         return results
+
+    def calculate_device_age_months(self, purchase_date: str) -> int:
+        """
+        Calculate the device age in months based on purchase date.
+        
+        Args:
+            purchase_date (str): The purchase date in YYYY-MM-DD format
+            
+        Returns:
+            int: Age in months, or 0 if purchase date is invalid
+        """
+        result = self.buyout_calculator.calculate_months_since_purchase(purchase_date)
+        # Convert None to 0 for backward compatibility
+        return 0 if result is None else result

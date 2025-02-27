@@ -1,52 +1,47 @@
 """
-CLI commands package for the Assets API Client.
+Command module initialization.
 
-This package contains command implementations for the Assets API Client CLI.
+This module exposes functions to register commands and retrieve command handlers.
 """
 import argparse
+from typing import Dict, Optional, Type
 
-from .get_command import GetCommand
+from ..command_base import BaseCommand
 from .aql_command import AqlCommand
-from .update_command import UpdateCommand
+from .get_command import GetCommand
 from .process_command import ProcessCommand
+from .update_command import UpdateCommand
 
-# Command registry
-_COMMANDS = {
-    'get': GetCommand,
+# Dictionary mapping command names to command classes
+COMMANDS: Dict[str, Type[BaseCommand]] = {
     'aql': AqlCommand,
-    'update': UpdateCommand,
+    'get': GetCommand,
     'process': ProcessCommand,
+    'update': UpdateCommand,
 }
 
-def register_commands(subparsers):
+def register_commands(subparsers) -> None:
     """
-    Register all commands with the argument parser.
+    Register all available commands with the argument parser.
     
     Args:
-        subparsers: subparsers object from argparse
-        
-    Returns:
-        dict: Dictionary of registered command parsers
+        subparsers: Subparsers object from argparse
     """
-    parsers = {}
-    for name, command_class in _COMMANDS.items():
-        command = command_class()
-        parser = subparsers.add_parser(name, help=command.__doc__)
-        command.configure_parser(parser)
-        parsers[name] = parser
-    return parsers
+    for cmd_name, cmd_class in COMMANDS.items():
+        cmd_parser = subparsers.add_parser(cmd_name, help=cmd_class.__doc__)
+        cmd_instance = cmd_class()
+        cmd_instance.configure_parser(cmd_parser)
 
-def get_command(name):
+def get_command(name: str) -> Optional[BaseCommand]:
     """
-    Get a command instance by name.
+    Get a command handler by name.
     
     Args:
-        name (str): The name of the command
+        name: Command name
         
     Returns:
-        BaseCommand: An instance of the requested command, or None if not found
+        Command handler instance or None if not found
     """
-    command_class = _COMMANDS.get(name)
-    if command_class:
-        return command_class()
-    return None
+    if name not in COMMANDS:
+        return None
+    return COMMANDS[name]()

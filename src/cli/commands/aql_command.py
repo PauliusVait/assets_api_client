@@ -1,71 +1,61 @@
 """
-AQL query command for the Assets CLI.
+Implementation of the AQL (Asset Query Language) command.
 
-This module provides the command-line interface for executing
-AQL (Atlassian Query Language) queries against the Jira Assets API.
+This module provides the AqlCommand class for executing AQL queries
+against the Jira Assets API and displaying the results.
 """
+import argparse
+from typing import Optional
+
+from ...jira_core.asset_client import AssetsClient
+from ...logging.logger import Logger
 from ..command_base import BaseCommand
-from ..output_formatter import format_asset_output
+from ..output_formatter import format_query_results
 
 class AqlCommand(BaseCommand):
-    """Command to execute AQL queries"""
+    """Command handler for executing AQL queries."""
     
-    def configure_parser(self, parser):
+    def configure_parser(self, parser: argparse.ArgumentParser) -> None:
         """
-        Configure argument parser for the AQL command.
+        Configure the argument parser for this command.
         
         Args:
-            parser: ArgumentParser instance to configure
-            
-        Returns:
-            Configured parser
+            parser: The parser to configure
         """
         parser.add_argument('--query', type=str, required=True, 
-            help='AQL query string. Use objectType = "Type Name" for type filtering')
-        parser.add_argument('--start-at', type=int, default=0, 
-            help='Starting index for pagination (default: 0)')
-        parser.add_argument('--max-results', type=int, default=50, 
-            help='Maximum number of results (default: 50)')
-        parser.add_argument('--no-attributes', action='store_false', 
-            dest='include_attributes', help='Exclude attributes from results')
+                            help='AQL query string (e.g., objectType = "iPhone")')
+        parser.add_argument('--debug', action='store_true', help='Enable debug logging')
         parser.add_argument('--refresh-cache', action='store_true', 
-            help='Force refresh of schema cache')
-        parser.add_argument('--debug', action='store_true', 
-            help='Enable debug logging')
-        return parser
-        
-    def execute(self, args):
+                           help='Refresh schema cache before processing')
+    
+    def execute(self, args: argparse.Namespace) -> bool:
         """
-        Execute the AQL command with the parsed arguments.
+        Execute the AQL command.
         
         Args:
-            args: Parsed command line arguments
+            args: Parsed command arguments
             
         Returns:
             bool: True if successful, False otherwise
         """
-        self.setup(args)
+        # Configure logging with our custom Logger class
+        logger = Logger.configure(console_level="DEBUG" if args.debug else "INFO")
         
-        try:
-            self.logger.info(f"Executing AQL query: {args.query}")
-            try:
-                results = self.client.get_objects_aql(
-                    args.query, 
-                    args.start_at, 
-                    args.max_results, 
-                    args.include_attributes
-                )
-                
-                if results:
-                    self.logger.info(f"Query returned {len(results)} results")
-                    for asset in results:
-                        self.logger.info("\n" + format_asset_output(asset))
-                else:
-                    self.logger.info("No results found")
-                    
-                return True
-            except Exception as e:
-                return self.handle_error(e, "executing AQL query")
-                
-        except Exception as e:
-            return self.handle_error(e, "executing AQL command")
+        # Initialize client
+        client = AssetsClient(refresh_cache=args.refresh_cache)
+        
+        # Execute the query
+        logger.info(f"Executing AQL query: {args.query}")
+        results = client.query_objects_aql(args.query)
+        
+        if not results or not results.get('values'):
+            logger.info("No results found for the query")
+            return True
+        
+        # Format and display the results
+        values = results.get('values', [])
+        logger.info(f"Found {len(values)} results")
+        formatted = format_query_results(results)
+        logger.info(f"\n{formatted}")  # Only log, don't use print()
+        
+        return True

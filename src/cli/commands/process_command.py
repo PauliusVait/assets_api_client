@@ -5,7 +5,7 @@ This module provides the command-line interface for processing
 assets according to defined business rules using the Jira Assets API.
 """
 from ..command_base import BaseCommand
-from ..output_formatter import format_asset_output
+from ..output_formatter import format_asset, format_process_results
 from ...jira_core.services.asset_processor import AssetProcessor
 
 class ProcessCommand(BaseCommand):
@@ -27,6 +27,8 @@ class ProcessCommand(BaseCommand):
         parser.add_argument('--refresh-cache', action='store_true', 
             help='Force refresh of schema cache (use after object types are renamed in Jira)')
         parser.add_argument('--debug', action='store_true', help='Enable debug logging')
+        parser.add_argument('--recalculate-buyout', action='store_true',
+            help='Force recalculation of buyout prices even if they exist')
         return parser
         
     def execute(self, args):
@@ -95,7 +97,11 @@ class ProcessCommand(BaseCommand):
             # Process the assets
             self.logger.info(f"Processing {len(assets_to_process)} assets...")
             try:
-                results = processor.update_multiple_assets(assets_to_process)
+                # Pass the recalculate_buyout flag to the processor
+                results = processor.update_multiple_assets(
+                    assets_to_process, 
+                    force_buyout_recalculation=args.recalculate_buyout if hasattr(args, 'recalculate_buyout') else False
+                )
                 
                 # Display results
                 success_count = sum(1 for status in results.values() if status)
@@ -115,7 +121,7 @@ class ProcessCommand(BaseCommand):
                     if success:
                         try:
                             updated_asset = self.client.get_object(asset_id)
-                            self.logger.info("\n" + format_asset_output(updated_asset))
+                            self.logger.info("\n" + format_asset(updated_asset))
                         except Exception as e:
                             self.handle_error(e, f"retrieving updated asset {asset_id}")
                 

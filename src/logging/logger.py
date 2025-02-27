@@ -7,6 +7,7 @@ console and file outputs with configurable log levels.
 import logging
 import os
 from datetime import datetime
+from typing import Union
 
 class Logger:
     """
@@ -19,6 +20,13 @@ class Logger:
     _instance = None
     _initialized = False
 
+    # Constants for log levels, mirroring the standard logging module
+    DEBUG = logging.DEBUG
+    INFO = logging.INFO
+    WARNING = logging.WARNING
+    ERROR = logging.ERROR
+    CRITICAL = logging.CRITICAL
+    
     def __new__(cls):
         """
         Create a new Logger instance or return the existing one.
@@ -39,7 +47,7 @@ class Logger:
             Logger._initialized = True
 
     @staticmethod
-    def configure(console_level=logging.INFO, file_level=logging.DEBUG):
+    def configure(console_level=INFO, file_level=DEBUG):
         """
         Configure the logging system with file and console handlers.
         
@@ -47,12 +55,20 @@ class Logger:
         both console and file logging with specified log levels.
         
         Args:
-            console_level (int): Logging level for console output. Default: logging.INFO
-            file_level (int): Logging level for file output. Default: logging.DEBUG
+            console_level: Logging level for console output.
+                Can be an int constant or a string ('DEBUG', 'INFO', etc.)
+            file_level: Logging level for file output.
+                Can be an int constant or a string ('DEBUG', 'INFO', etc.)
             
         Returns:
             Logger: The configured Logger instance.
         """
+        # Convert string level names to numeric values if needed
+        if isinstance(console_level, str):
+            console_level = getattr(logging, console_level.upper(), logging.INFO)
+        if isinstance(file_level, str):
+            file_level = getattr(logging, file_level.upper(), logging.DEBUG)
+            
         if not os.path.exists('logs'):
             os.makedirs('logs')
 
