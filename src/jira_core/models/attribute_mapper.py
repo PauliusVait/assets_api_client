@@ -35,20 +35,39 @@ class AttributeMapper:
         Returns:
             dict: A dictionary mapping attribute IDs to their names
         """
-        if 'objectTypeAttributes' not in response_data:
-            self.logger.debug("No objectTypeAttributes found in response")
-            return {}
-            
         definitions = {}
-        for attr in response_data['objectTypeAttributes']:
-            attr_id = str(attr.get('id'))
-            attr_name = attr.get('name')
-            if attr_id and attr_name:
-                definitions[attr_id] = attr_name
-                
-        # Update cache
-        self._definition_cache.update(definitions)
-        self.trim_cache()  # Call trim_cache after updating the cache
+        
+        # Handle list response (from direct attributes endpoint)
+        if isinstance(response_data, list):
+            for attr in response_data:
+                if isinstance(attr, dict):
+                    attr_id = str(attr.get('id', ''))
+                    attr_name = attr.get('name', '')
+                    if attr_id and attr_name:
+                        definitions[attr_id] = attr_name
+            
+            # If we got definitions, update cache and return
+            if definitions:
+                self._definition_cache.update(definitions)
+                self.trim_cache()
+                return definitions
+        
+        # Handle dict response
+        if isinstance(response_data, dict):
+            # Check different possible locations for attributes
+            for attr_key in ['objectTypeAttributes', 'objecttypeattributes', 'attributes']:
+                if attr_key in response_data and not definitions:
+                    for attr in response_data[attr_key]:
+                        attr_id = str(attr.get('id', ''))
+                        attr_name = attr.get('name', '')
+                        if attr_id and attr_name:
+                            definitions[attr_id] = attr_name
+        
+        # Update cache with what we found
+        if definitions:
+            self._definition_cache.update(definitions)
+            self.trim_cache()
+        
         return definitions
     
     def get_attribute_name(self, attr):

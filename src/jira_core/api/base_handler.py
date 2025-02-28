@@ -59,14 +59,47 @@ class BaseHandler:
         
         request_params = params or {}
         if method.upper() == 'GET':
-            request_params = BaseHandler.GET_PARAMS.copy()
-            if include_type_attributes:
-                request_params['expand'] = f"{request_params['expand']},objectTypeAttributes"
-            if params:
-                request_params.update(params)
+            # Start with default parameters
+            if not params or 'includeAttributes' not in params:
+                request_params['includeAttributes'] = 'true'
+            if not params or 'attributeNames' not in params:
+                request_params['attributeNames'] = '*'
             
+            # Handle expand parameters
+            expand_values = set()
+            
+            # Start with default expands
+            default_expands = ['attributes', 'objectType', 'attributeValues']
+            for value in default_expands:
+                expand_values.add(value)
+            
+            # Add objectTypeAttributes if requested
+            if include_type_attributes or ('objecttype/' in endpoint and 'objectTypeAttributes' not in expand_values):
+                expand_values.add('objectTypeAttributes')
+                
+            # If params has an 'expand' parameter, add those values too
+            if params and 'expand' in params:
+                for value in params['expand'].split(','):
+                    if value:
+                        expand_values.add(value)
+                        
+            # Set the final combined expand parameter
+            request_params['expand'] = ','.join(expand_values)
+            
+            # Update with any remaining parameters
+            if params:
+                for key, value in params.items():
+                    if key != 'expand':  # We've already handled expand
+                        request_params[key] = value
+        
+        # Debug parameters
+        client.logger.debug(f"Request parameters: {request_params}")
+        
         headers = {"Accept": "application/json", "Authorization": f"Basic {client.basic_auth}"}
-        if method.upper() == 'POST':
+        if json:
+            client.logger.debug(f"Request payload: {json}")
+            
+        if method.upper() in ['POST', 'PUT']:
             headers["Content-Type"] = "application/json"
 
         try:
@@ -76,6 +109,38 @@ class BaseHandler:
             )
             
             client.logger.debug(f"Response status: {response.status_code}")
+            
+            # For successful responses, log more details for debugging
+            if response.status_code >= 200 and response.status_code < 300:
+                try:
+                    # Try to peek at response content for debugging
+                    response_data = response.json()
+                    if isinstance(response_data, dict):
+                        keys = list(response_data.keys())
+                        client.logger.debug(f"Response contains these keys: {keys}")
+                        
+                        # If this is an object type response, log specific information
+                        if 'id' in response_data:
+                            client.logger.debug(f"Object ID: {response_data['id']}")
+                        if 'name' in response_data:
+                            client.logger.debug(f"Object name: {response_data['name']}")
+                        if 'attributes' in response_data:
+                            client.logger.debug(f"Found {len(response_data['attributes'])} attributes in response")
+                        if 'objectTypeAttributes' in response_data:
+                            client.logger.debug(f"Found {len(response_data['objectTypeAttributes'])} objectTypeAttributes in response")
+                    
+                except Exception:
+                    # Don't fail if we can't parse the JSON for debugging
+                    pass
+            
+            # For debugging errors
+            if response.status_code >= 400:
+                client.logger.debug(f"Response headers: {response.headers}")
+                try:
+                    error_data = response.json()
+                    client.logger.debug(f"Response body: {error_data}")
+                except Exception:
+                    client.logger.debug(f"Response raw text: {response.text}")
             
             if response.status_code == 404:
                 if 'object/' in endpoint:
@@ -87,8 +152,27 @@ class BaseHandler:
                 raise AssetNotFoundError("Requested resource was not found")
                 
             if response.status_code == 400:
-                error_data = response.json()
-                error_msg = error_data.get('errorMessage', '')
+                try:
+                    error_data = response.json()
+                    error_msg = error_data.get('errorMessage', '')
+                    if not error_msg:
+                        if 'errors' in error_data:
+                            # Handle array of errors
+                            error_msgs = []
+                            for err in error_data['errors']:
+                                if isinstance(err, dict):
+                                    error_msgs.append(err.get('message', str(err)))
+                                else:
+                                    error_msgs.append(str(err))
+                            error_msg = " | ".join(error_msgs)
+                        elif 'message' in error_data:
+                            error_msg = error_data['message']
+                        else:
+                            error_msg = f"Bad request: {error_data}"
+                except Exception:
+                    # If we can't parse the JSON, use the raw text
+                    error_msg = f"Bad request: {response.text}"
+                    
                 client.logger.error(f"API error: {error_msg}")
                 
                 if any(x in error_msg.lower() for x in ['invalid', 'syntax', 'malformed']):
@@ -116,6 +200,12 @@ class BaseHandler:
                     error_data = e.response.json()
                     if 'errorMessage' in error_data:
                         error_msg = error_data['errorMessage']
+                    elif 'message' in error_data:
+                        error_msg = error_data['message']
+                    elif 'errors' in error_data:
+                        error_msg = str(error_data['errors'])
+                    else:
+                        error_msg = str(error_data)
                 except (ValueError, KeyError):
                     error_msg = e.response.text
                 

@@ -39,50 +39,54 @@ class GetCommand(BaseCommand):
         Returns:
             bool: True if successful, False otherwise
         """
-        # Configure logging with our custom Logger class
-        logger = Logger.configure(console_level="DEBUG" if args.debug else "INFO")
-        
-        # Initialize client
-        client = AssetsClient(refresh_cache=args.refresh_cache)
-        
-        if args.id:
-            # Get a single asset
-            asset = client.get_object(args.id)
-            if not asset:
-                logger.error(f"Asset with ID {args.id} not found")
-                return False
+        try:
+            # Setup the client, logger, etc.
+            self.setup(args)
             
-            # Display the asset - only log, don't use print()
-            formatted = format_asset(asset)
-            logger.info(f"\n{formatted}")
-            return True
-            
-        elif args.ids:
-            # Get multiple assets
-            ids = [int(id.strip()) for id in args.ids.split(',') if id.strip()]
-            assets = []
-            
-            for asset_id in ids:
-                asset = client.get_object(asset_id)
-                if asset:
-                    assets.append(asset)
-                else:
-                    logger.warning(f"Asset with ID {asset_id} not found")
-            
-            if not assets:
-                logger.error("No assets found")
-                return False
+            if args.id:
+                # Get a single asset
+                asset = self.client.get_object(args.id)
+                if not asset:
+                    self.logger.error(f"Asset with ID {args.id} not found")
+                    return False
                 
-            # Display the assets summary - only log, don't use print()
-            formatted = format_assets(assets)
-            logger.info(f"\n{formatted}")
-            
-            # Display detailed information for each asset
-            for asset in assets:
-                logger.info("\nDetailed information:")
-                detailed = format_asset(asset)
-                logger.info(f"\n{detailed}")
+                # Display the asset
+                self.logger.info(f"\nAsset Details:")
+                formatted = format_asset(asset)
+                self.logger.info(f"\n{formatted}")
+                return True
                 
-            return True
+            elif args.ids:
+                # Get multiple assets
+                ids = [int(id.strip()) for id in args.ids.split(',') if id.strip()]
+                assets = []
+                
+                for asset_id in ids:
+                    asset = self.client.get_object(asset_id)
+                    if asset:
+                        assets.append(asset)
+                    else:
+                        self.logger.warning(f"Asset with ID {asset_id} not found")
+                
+                if not assets:
+                    self.logger.error("No assets found")
+                    return False
+                    
+                # Display the assets summary
+                self.logger.info(f"\nAssets Summary:")
+                formatted = format_assets(assets)
+                self.logger.info(f"\n{formatted}")
+                
+                # Display detailed information for each asset
+                self.logger.info("\nDetailed Asset Information:")
+                for i, asset in enumerate(assets):
+                    self.logger.info(f"\nAsset {i+1} of {len(assets)}:")
+                    detailed = format_asset(asset)
+                    self.logger.info(f"\n{detailed}")
+                    
+                return True
+                
+            return False
             
-        return False
+        except Exception as e:
+            return self.handle_error(e, "retrieving asset(s)")

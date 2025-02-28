@@ -11,6 +11,7 @@ from .aql_command import AqlCommand
 from .get_command import GetCommand
 from .process_command import ProcessCommand
 from .update_command import UpdateCommand
+from .create_command import CreateCommand  # Add import for the new command
 
 # Dictionary mapping command names to command classes
 COMMANDS: Dict[str, Type[BaseCommand]] = {
@@ -18,6 +19,7 @@ COMMANDS: Dict[str, Type[BaseCommand]] = {
     'get': GetCommand,
     'process': ProcessCommand,
     'update': UpdateCommand,
+    'create': CreateCommand,  # Register the new command
 }
 
 def register_commands(subparsers) -> None:

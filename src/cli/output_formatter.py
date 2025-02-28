@@ -4,7 +4,7 @@ Output formatter for CLI results.
 This module provides functions for formatting various types of results
 for display in the command-line interface.
 """
-from tabulate import tabulate
+from prettytable import PrettyTable
 from typing import List, Dict, Any, Optional
 
 def format_asset(asset: Any) -> str:
@@ -28,27 +28,36 @@ def format_asset(asset: Any) -> str:
     attributes = asset.attributes if hasattr(asset, 'attributes') else {}
     
     # Get important attributes with fallbacks
-    asset_name = attributes.get('Name', '')
-    asset_key = attributes.get('Key', asset.key if hasattr(asset, 'key') else '')
+    asset_name = attributes.get('Name', '') or getattr(asset, 'name', '')
+    asset_key = attributes.get('Key', '') or getattr(asset, 'key', '')
     
-    # Summary section with just the most critical info
-    summary_table = [
-        ["ID", asset_id],
-        ["Name", asset_name],
-        ["Type", asset_type],
-        ["Key", asset_key],
-    ]
+    # Create a summary table with critical info
+    summary_table = PrettyTable()
+    summary_table.field_names = ["Property", "Value"]
+    summary_table.add_row(["ID", asset_id])
+    summary_table.add_row(["Name", asset_name])
+    summary_table.add_row(["Type", asset_type])
+    summary_table.add_row(["Key", asset_key])
     
-    # Build the full attributes table (sorted alphabetically)
-    attributes_table = []
+    # Set alignment
+    summary_table.align["Property"] = "l"
+    summary_table.align["Value"] = "l"
+    
+    # Create an attributes table
+    attr_table = PrettyTable()
+    attr_table.field_names = ["Attribute", "Value"]
+    
+    # Add rows for each attribute (sorted alphabetically)
     for key in sorted(attributes.keys()):
         value = attributes.get(key, '')
-        attributes_table.append([key, str(value)])
+        attr_table.add_row([key, str(value)])
     
-    # Combine the tables with a separator
-    combined_table = summary_table + [['', ''], ['Attributes', '']] + attributes_table
-            
-    return tabulate(combined_table, tablefmt="grid")
+    # Set alignment
+    attr_table.align["Attribute"] = "l"
+    attr_table.align["Value"] = "l"
+    
+    # Combine the output
+    return f"{summary_table.get_string()}\n\nAttributes:\n{attr_table.get_string()}"
 
 def format_assets(assets: List[Any]) -> str:
     """
@@ -63,34 +72,89 @@ def format_assets(assets: List[Any]) -> str:
     if not assets:
         return "No assets found"
     
-    table = []
-    headers = ["ID", "Name", "Type", "Key"]
+    table = PrettyTable()
+    table.field_names = ["ID", "Name", "Type", "Key"]
     
     for asset in assets:
         name = asset.attributes.get('Name', '') if hasattr(asset, 'attributes') else ''
+        if not name and hasattr(asset, 'name'):
+            name = asset.name
+            
         object_type = asset.object_type if hasattr(asset, 'object_type') else ''
         key = asset.key if hasattr(asset, 'key') else ''
         asset_id = asset.id if hasattr(asset, 'id') else ''
         
-        table.append([asset_id, name, object_type, key])
+        table.add_row([asset_id, name, object_type, key])
     
-    return tabulate(table, headers=headers, tablefmt="grid")
+    # Set alignment
+    for field in table.field_names:
+        table.align[field] = "l"
+    
+    return table.get_string()
 
-def format_query_results(results: Dict[str, Any]) -> str:
+def format_query_results(results):
     """
-    Format AQL query results for display.
+    Format query results into a human-readable table.
     
     Args:
-        results: Query results dictionary
+        results: List of Asset objects or raw API response
         
     Returns:
-        str: Formatted query results as a string
+        str: Formatted table of query results
     """
-    if not results or 'values' not in results:
+    # Check if results is empty
+    if not results:
         return "No results found"
     
-    values = results.get('values', [])
-    return format_assets(values)
+    # Check what type of results we're dealing with
+    if isinstance(results, dict) and 'values' in results:
+        # Raw API response with 'values' list
+        assets = results.get('values', [])
+    elif isinstance(results, list):
+        # List of Asset objects
+        assets = results
+    else:
+        # Unexpected type
+        return f"Unexpected results type: {type(results)}"
+    
+    # If no assets found after processing
+    if not assets:
+        return "No results found"
+    
+    # Create the table
+    table = PrettyTable()
+    table.field_names = ['ID', 'Name', 'Type', 'Key']
+    
+    # Add rows for each asset
+    for asset in assets:
+        if hasattr(asset, 'to_dict'):
+            # This is an Asset object
+            asset_dict = asset.to_dict()
+            row = [
+                asset_dict.get('id', ''),
+                asset_dict.get('name', ''), 
+                asset_dict.get('type', ''),
+                asset_dict.get('object_key', '')
+            ]
+        elif isinstance(asset, dict):
+            # This is a raw dictionary from API response
+            row = [
+                asset.get('id', ''),
+                asset.get('name', ''),
+                asset.get('objectType', {}).get('name', ''),
+                asset.get('objectKey', '')
+            ]
+        else:
+            # Skip unexpected asset types
+            continue
+            
+        table.add_row(row)
+    
+    # Set alignment
+    for field in table.field_names:
+        table.align[field] = 'l'
+    
+    return table.get_string()
 
 def format_process_results(results: Dict[int, bool]) -> str:
     """
@@ -105,13 +169,106 @@ def format_process_results(results: Dict[int, bool]) -> str:
     if not results:
         return "No assets were processed"
     
+    # Create summary statistics
     total = len(results)
     succeeded = sum(1 for status in results.values() if status)
+    failed = total - succeeded
     
-    table = [
-        ["Total assets processed", str(total)],
-        ["Successfully processed", str(succeeded)],
-        ["Failed", str(total - succeeded)]
-    ]
+    # Create a summary table for statistics
+    summary_table = PrettyTable()
+    summary_table.field_names = ["Metric", "Value"]
+    summary_table.add_row(["Total assets processed", str(total)])
+    summary_table.add_row(["Successfully processed", str(succeeded)])
+    summary_table.add_row(["Failed", str(failed)])
     
-    return tabulate(table, tablefmt="grid")
+    # Set alignment
+    summary_table.align["Metric"] = "l"
+    summary_table.align["Value"] = "r"
+    
+    return summary_table.get_string()
+
+def format_process_details(results: Dict[int, bool], assets: List[Any], max_details: int = None) -> str:
+    """
+    Format details of processed assets for display.
+    
+    Args:
+        results: Dictionary mapping asset IDs to success status
+        assets: List of processed assets
+        max_details: Maximum number of assets to show details for
+        
+    Returns:
+        str: Formatted details as a string
+    """
+    if not results or not assets:
+        return "No details available"
+    
+    # Create a lookup table for assets by ID
+    asset_map = {str(asset.id): asset for asset in assets if hasattr(asset, 'id')}
+    
+    # Create a table for asset details
+    details_table = PrettyTable()
+    details_table.field_names = ["ID", "Name", "Type", "Status"]
+    
+    # Add a row for each asset, up to max_details if specified
+    shown_count = 0
+    for asset_id, success in results.items():
+        if max_details is not None and shown_count >= max_details:
+            break
+            
+        asset_id_str = str(asset_id)
+        if asset_id_str in asset_map:
+            asset = asset_map[asset_id_str]
+            asset_name = asset.attributes.get('Name', '') if hasattr(asset, 'attributes') else ''
+            if not asset_name and hasattr(asset, 'name'):
+                asset_name = asset.name
+            asset_type = asset.object_type if hasattr(asset, 'object_type') else ''
+        else:
+            asset_name = "Unknown"
+            asset_type = "Unknown"
+        
+        status = "✅ Success" if success else "❌ Failed"
+        details_table.add_row([asset_id, asset_name, asset_type, status])
+        shown_count += 1
+    
+    # Set alignment
+    for field in ["ID", "Name", "Type"]:
+        details_table.align[field] = "l"
+    details_table.align["Status"] = "c"
+    
+    # Add a note if we didn't show all assets
+    footer = ""
+    if max_details is not None and len(results) > max_details:
+        footer = f"\n(Showing {max_details} of {len(results)} total assets)"
+    
+    return details_table.get_string() + footer
+
+def format_update_results(results: Dict[int, bool]) -> str:
+    """
+    Format asset update results for display.
+    
+    Args:
+        results: Dictionary mapping asset IDs to success status
+        
+    Returns:
+        str: Formatted update results as a string
+    """
+    if not results:
+        return "No assets were updated"
+    
+    # Create summary statistics
+    total = len(results)
+    succeeded = sum(1 for status in results.values() if status)
+    failed = total - succeeded
+    
+    # Create a summary table for statistics
+    summary_table = PrettyTable()
+    summary_table.field_names = ["Metric", "Value"]
+    summary_table.add_row(["Total assets updated", str(total)])
+    summary_table.add_row(["Successfully updated", str(succeeded)])
+    summary_table.add_row(["Failed", str(failed)])
+    
+    # Set alignment
+    summary_table.align["Metric"] = "l"
+    summary_table.align["Value"] = "r"
+    
+    return summary_table.get_string()
