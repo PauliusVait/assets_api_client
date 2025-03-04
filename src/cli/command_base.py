@@ -6,8 +6,7 @@ for all command-line interface commands in the Assets CLI.
 """
 import argparse
 from abc import ABC, abstractmethod
-import logging
-from ..jira_core.asset_client import AssetsClient  # Make sure this path is correct
+from ..jira_core.asset_client import AssetsClient  
 from ..logging.logger import Logger
 from .error_handler import ErrorHandler
 
@@ -55,7 +54,7 @@ class BaseCommand(ABC):
         """
         # Configure logging
         self.debug = args.debug if hasattr(args, 'debug') else False
-        log_level = logging.DEBUG if self.debug else logging.INFO
+        log_level = "DEBUG" if self.debug else "INFO"
         self.logger = Logger.configure(console_level=log_level)
         
         # Initialize client

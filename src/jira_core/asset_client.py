@@ -5,6 +5,7 @@ This module provides the AssetsClient class which implements the core
 functionality for interacting with the Jira Assets API, including
 querying, retrieving, and updating assets.
 """
+from typing import Dict, List, Any
 from .client_base import BaseClient
 from .models.asset import Asset
 from .models.attribute_mapper import AttributeMapper
@@ -152,3 +153,71 @@ class AssetsClient(BaseClient):
             raise InvalidUpdateError("Updates must be a non-empty dictionary of attribute name/value pairs")
             
         return update_object_func(self, object_id, updates)
+
+    def create_object(self, object_type_id: str, attributes: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Create a new object (asset) in the Jira Assets API.
+        
+        Request format per documentation:
+        {
+            "objectTypeId": "23",  # Must be a string
+            "attributes": [
+                {
+                    "objectTypeAttributeId": "135", 
+                    "objectAttributeValues": [{"value": "Some value"}]
+                },
+                ...
+            ]
+        }
+        
+        Args:
+            object_type_id (str): The ID of the object type to create
+            attributes (List[Dict]): List of attribute objects with values to set
+            
+        Returns:
+            Dict: The newly created asset object
+            
+        Raises:
+            SchemaError: If the object type doesn't exist
+            ApiError: For other API errors
+        """
+        self.logger.debug(f"Creating new asset of type {object_type_id} with attributes")
+        
+        # Check if object_type_id is a numeric ID or a name
+        if not str(object_type_id).isdigit() and object_type_id in self.schema_info.get('object_types', {}):
+            # If it's a name that happens to be a key in object_types, get the actual ID
+            actual_id = self.schema_info['object_types'][object_type_id]
+            if isinstance(actual_id, str) and actual_id.isdigit():
+                self.logger.debug(f"Converting object type name '{object_type_id}' to ID '{actual_id}'")
+                object_type_id = actual_id
+        
+        # Ensure objectTypeId is a string (possibly representing a number)
+        object_type_id = str(object_type_id)
+        
+        # Validate format before sending
+        if not object_type_id.isdigit():
+            self.logger.error(f"Invalid object type ID: {object_type_id}. The API expects a numeric ID.")
+            raise SchemaError(f"Invalid object type ID: {object_type_id}. The API expects a numeric ID.")
+        
+        # Validate attributes format
+        if not attributes or not isinstance(attributes, list):
+            self.logger.error("Attributes must be a non-empty list")
+            raise AssetsError("Attributes must be a non-empty list")
+        
+        # Create the payload exactly as required by documentation
+        payload = {
+            "objectTypeId": object_type_id,
+            "attributes": attributes
+        }
+        
+        self.logger.debug(f"Sending create request with payload: {payload}")
+        
+        response = BaseHandler.make_request(
+            self, 
+            'POST', 
+            'object/create', 
+            json=payload
+        )
+        
+        self.logger.info(f"Successfully created asset with ID: {response.get('id')}")
+        return response

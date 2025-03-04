@@ -1,68 +1,92 @@
 """
-Asset retrieval command for the Assets CLI.
+Implementation of the 'get' command for retrieving assets.
 
-This module provides the command-line interface for retrieving
-individual assets by their ID from the Jira Assets API.
+This module provides the GetCommand class that handles retrieving
+assets by ID or IDs and displaying the results.
 """
+import argparse
+from typing import Optional, List
+
+from ...jira_core.asset_client import AssetsClient
+from ...logging.logger import Logger
 from ..command_base import BaseCommand
-from ..output_formatter import format_asset_output
+from ..output_formatter import format_asset, format_assets
 
 class GetCommand(BaseCommand):
-    """Command to retrieve a single asset by ID"""
+    """Command handler for retrieving assets."""
     
-    def configure_parser(self, parser):
+    def configure_parser(self, parser: argparse.ArgumentParser) -> None:
         """
-        Configure argument parser for the Get command.
+        Configure the argument parser for this command.
         
         Args:
-            parser: ArgumentParser instance to configure
-            
-        Returns:
-            Configured parser
+            parser: The parser to configure
         """
-        id_group = parser.add_mutually_exclusive_group(required=True)
-        id_group.add_argument('--id', type=int, help='Object ID to retrieve')
-        id_group.add_argument('--ids', type=str, help='Comma-separated list of asset IDs to retrieve')
+        group = parser.add_mutually_exclusive_group(required=True)
+        group.add_argument('--id', type=int, help='Asset ID to retrieve')
+        group.add_argument('--ids', type=str, help='Comma-separated list of asset IDs')
         parser.add_argument('--debug', action='store_true', help='Enable debug logging')
-        return parser
-        
-    def execute(self, args):
+        parser.add_argument('--refresh-cache', action='store_true', 
+                           help='Refresh schema cache before processing')
+    
+    def execute(self, args: argparse.Namespace) -> bool:
         """
-        Execute the Get command with the parsed arguments.
+        Execute the get command.
         
         Args:
-            args: Parsed command line arguments
+            args: Parsed command arguments
             
         Returns:
             bool: True if successful, False otherwise
         """
-        self.setup(args)
-        
         try:
-            asset_ids = []
+            # Setup the client, logger, etc.
+            self.setup(args)
             
             if args.id:
-                asset_ids = [args.id]
+                # Get a single asset
+                asset = self.client.get_object(args.id)
+                if not asset:
+                    self.logger.error(f"Asset with ID {args.id} not found")
+                    return False
+                
+                # Display the asset
+                self.logger.info(f"\nAsset Details:")
+                formatted = format_asset(asset)
+                self.logger.info(f"\n{formatted}")
+                return True
+                
             elif args.ids:
-                try:
-                    asset_ids = [int(id.strip()) for id in args.ids.split(',')]
-                except ValueError:
-                    return self.handle_error(ValueError("IDs must be valid integers"), "parsing asset IDs")
+                # Get multiple assets
+                ids = [int(id.strip()) for id in args.ids.split(',') if id.strip()]
+                assets = []
                 
-            if not asset_ids:
-                self.logger.error("You must specify either --id or --ids")
-                return False
+                for asset_id in ids:
+                    asset = self.client.get_object(asset_id)
+                    if asset:
+                        assets.append(asset)
+                    else:
+                        self.logger.warning(f"Asset with ID {asset_id} not found")
                 
-            for asset_id in asset_ids:
-                self.logger.info(f"Fetching object data for ID: {asset_id}...")
-                try:
-                    result = self.client.get_object(asset_id)
-                    self.logger.info("Object data retrieved successfully")
-                    self.logger.info("\n" + format_asset_output(result))
-                except Exception as e:
-                    self.handle_error(e, f"retrieving asset {asset_id}")
-                    continue
+                if not assets:
+                    self.logger.error("No assets found")
+                    return False
+                    
+                # Display the assets summary
+                self.logger.info(f"\nAssets Summary:")
+                formatted = format_assets(assets)
+                self.logger.info(f"\n{formatted}")
                 
-            return True
+                # Display detailed information for each asset
+                self.logger.info("\nDetailed Asset Information:")
+                for i, asset in enumerate(assets):
+                    self.logger.info(f"\nAsset {i+1} of {len(assets)}:")
+                    detailed = format_asset(asset)
+                    self.logger.info(f"\n{detailed}")
+                    
+                return True
+                
+            return False
+            
         except Exception as e:
-            return self.handle_error(e, "executing get command")
+            return self.handle_error(e, "retrieving asset(s)")

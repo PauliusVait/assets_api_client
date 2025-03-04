@@ -6,9 +6,10 @@ from various sources including environment variables and configuration files.
 It centralizes configuration management for the Assets API Client.
 """
 import os
-import logging
+import logging  # Keep this import as we need constants for mapping string level names
 from pathlib import Path
 from dotenv import load_dotenv
+from .logging.logger import Logger  # Add import for Logger class
 
 # Determine the project root directory
 PROJECT_ROOT = Path(__file__).parent.parent.absolute()
@@ -55,13 +56,13 @@ class Config:
             int: The log level (e.g., logging.INFO, logging.DEBUG)
         """
         level_map = {
-            'DEBUG': logging.DEBUG,
-            'INFO': logging.INFO,
-            'WARNING': logging.WARNING,
-            'ERROR': logging.ERROR,
-            'CRITICAL': logging.CRITICAL
+            'DEBUG': Logger.DEBUG,
+            'INFO': Logger.INFO,
+            'WARNING': Logger.WARNING,
+            'ERROR': Logger.ERROR,
+            'CRITICAL': Logger.CRITICAL
         }
-        return level_map.get(cls.LOG_LEVEL, logging.INFO)
+        return level_map.get(cls.LOG_LEVEL, Logger.INFO)
     
     @classmethod
     def validate(cls):

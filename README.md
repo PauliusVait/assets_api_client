@@ -17,34 +17,6 @@ A Python client for interacting with the Jira Assets API.
    JIRA_SITE_NAME=your-site
    ```
 
-## Project Structure
-
-```
-assets_api_client/
-├── src/                # Source code directory
-│   ├── cli/            # CLI command handlers
-│   │   ├── commands/   # Individual command implementations
-│   │   └── ...
-│   ├── core/           # Core business logic
-│   │   ├── api/        # API client components
-│   │   ├── models/     # Data models
-│   │   ├── services/   # Service layer between API and CLI
-│   │   └── ...
-│   └── logging/        # Logging utilities
-│
-├── tests/              # Test directory
-│   ├── unit/           # Unit tests
-│   └── integration/    # Integration tests
-│
-├── logs/               # Log files directory
-├── cache/              # Schema cache directory
-├── .env                # Environment variables
-├── main.py             # Entry point
-├── README.md           # This file
-├── requirements.txt    # Dependencies
-└── setup.sh            # Setup script
-```
-
 ## Usage
 
 Retrieve assets by ID:
@@ -64,6 +36,12 @@ python main.py update --id 12345 --attr "name=New Name" --attr "status=Active"
 # Update multiple assets with the same attributes
 python main.py update --ids 12345,12346,12347 --attr "status=Active"
 python main.py update --ids 12345,12346 --attr "Name=Test"
+```
+
+Create assets:
+```bash
+# Create a single asset
+python main.py create --type "MacBook" --attributes '{"Name": "Test", "Serial Number": "S0010"}'
 ```
 
 Execute AQL queries:
@@ -92,15 +70,29 @@ python main.py process --query 'objectType = "Macbook" OR objectType = "iPhone"'
 
 # Refresh schema cache when object types have been renamed in Jira
 python main.py process --query 'objectType = "Macbook"' --refresh-cache
+
+# Force recalculation of buyout prices even if they exist
+python main.py process --query 'objectType = "Macbook"' --recalculate-buyout
 ```
 
 ### Asset Processing Rules
 
 When using the `process` command, assets will be updated according to these business rules:
 
-- Asset name will be formatted as: "Model - Serial Number - Buyout Price: {price}€"
-- If Model is not available, ObjectType will be used instead
-- Buyout Price will only be included if Device Age >= 18 months
+1. **Device Age Calculation**:
+   - Calculated as the number of months between Purchase Date and today
+   - Stored as the "Device Age" attribute
+
+2. **Buyout Price Calculation**:
+   - Based on Purchase Cost, Device Age, and device type (per company policy)
+   - VAT (21%) is added to the purchase cost before applying residual percentage
+   - Stored as the "Buyout Price" attribute
+
+3. **Asset Name Formatting**:
+   - Format: "{Model} - {Serial Number} - Buyout Price: {price}€" (if age >= 18 months)
+   - Format: "{Model} - {Serial Number}" (if age < 18 months)
+   - If Model is not available, ObjectType will be used instead
+   - If Serial Number is not available, "Unknown" will be used
 
 ## Common Errors
 
