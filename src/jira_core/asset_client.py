@@ -234,3 +234,22 @@ class AssetsClient(BaseClient):
         
         self.logger.info(f"Successfully created asset with ID: {response.get('id')}")
         return response
+
+    async def process_asset(self, asset_id):
+        """
+        Process an asset according to business rules.
+        
+        Args:
+            asset_id (str): The ID of the asset to process
+            
+        Returns:
+            Dict: The processed asset data
+        """
+        self.logger.info(f"Processing asset {asset_id}")
+        
+        # Get the asset
+        asset = self.get_object(asset_id)
+        
+        # TODO: Implement your asset processing logic here
+        # For now, just return the asset
+        return asset

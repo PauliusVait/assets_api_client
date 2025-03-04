@@ -47,6 +47,12 @@ class Config:
     CACHE_DIR = os.getenv('CACHE_DIR', str(PROJECT_ROOT / 'cache'))
     CACHE_EXPIRY = int(os.getenv('CACHE_EXPIRY', '3600'))  # seconds
     
+    # Webhook configuration
+    WEBHOOK_SECRET = os.getenv('WEBHOOK_SECRET')
+    WEBHOOK_ENABLED = os.getenv('WEBHOOK_ENABLED', 'false').lower() == 'true'
+    WEBHOOK_PORT = int(os.getenv('WEBHOOK_PORT', '8000'))
+    WEBHOOK_HOST = os.getenv('WEBHOOK_HOST', '0.0.0.0')
+    
     @classmethod
     def get_log_level(cls):
         """

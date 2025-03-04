@@ -17,6 +17,70 @@ A Python client for interacting with the Jira Assets API.
    JIRA_SITE_NAME=your-site
    ```
 
+## Project Structure
+
+## Project Structure
+
+```python
+.
+├── main.py                 # Main CLI entry point for executing commands
+├── requirements.txt        # Python package dependencies and versions
+├── setup.sh               # Environment setup script (venv, dependencies, dirs)
+└── src/                   # Source code root directory
+    ├── cli/               # Command-line interface components
+    │   ├── commands/      # Individual command implementations (get, update, process)
+    │   ├── command_base.py    # Abstract base class for all CLI commands
+    │   ├── error_handler.py   # Centralized error handling and formatting 
+    │   └── output_formatter.py # Results formatting and table generation
+    ├── config.py          # Environment and app configuration management
+    ├── jira_core/         # Core business logic and API integration
+    │   ├── api/           # API client implementations for Jira REST endpoints
+    │   │   ├── asset_query.py     # AQL query execution
+    │   │   ├── asset_retrieval.py # Single asset fetching
+    │   │   ├── asset_update.py    # Asset updates and modifications
+    │   │   └── schema_discovery.py # Object type schema handling
+    │   ├── asset_client.py    # High-level asset operations facade
+    │   ├── client_base.py     # Base HTTP client with auth and retry logic
+    │   ├── services/          # Business logic and processing
+    │   │   ├── asset_processor.py # Asset processing rules implementation
+    │   │   └── asset_creator.py   # Asset creation business logic
+    │   └── exceptions.py      # Custom exception classes
+    ├── logging/           # Logging configuration and handlers
+    │   └── logger.py      # Centralized logging setup and formatting
+    └── webhooks/          # Webhook handlers for external integrations
+
+```
+
+The project follows a layered architecture:
+
+CLI Layer (src/cli/)
+
+Handles user input parsing and validation
+Formats output for console display
+Implements command-specific logic
+Provides error handling and user feedback
+Core Layer (src/jira_core/)
+
+Implements core business logic
+Manages API communication with Jira
+Handles data models and transformations
+Processes assets according to business rules
+Service Layer (src/jira_core/services/)
+
+Implements business rules for assets
+Manages asset lifecycle operations
+Handles complex processing workflows
+Infrastructure
+
+Configuration (src/config.py)
+Logging (src/logging/)
+Webhook integration (src/webhooks/)
+Key entry points:
+
+main.py: CLI application entry point
+setup.sh: One-time environment setup
+requirements.txt: Project dependencies
+
 ## Usage
 
 Retrieve assets by ID:
@@ -77,6 +141,54 @@ python main.py process --query 'objectType = "Macbook"' --refresh-cache
 python main.py process --query 'objectType = "Macbook"' --recalculate-buyout
 ```
 
+## Webhooks
+
+The application supports webhooks for real-time processing of asset updates.
+
+### Webhook Configuration
+
+1. Generate a secure webhook secret:
+   ```bash
+   python -c "import secrets; print(secrets.token_hex(32))"
+   ```
+
+2. Configure webhook settings in your `.env` file:
+   ```
+   WEBHOOK_ENABLED=true
+   WEBHOOK_SECRET=<generated-secret>
+   # For local development:
+   WEBHOOK_HOST=127.0.0.1
+   WEBHOOK_PORT=8000
+   # For production:
+   WEBHOOK_HOST=<your-public-ip>
+   WEBHOOK_PORT=8000
+   ```
+
+3. Port Selection:
+   - Development: Any free port between 8000-8999 is conventional
+   - Production: Consider using a reverse proxy (nginx/Apache) on port 80/443
+
+4. Host Configuration:
+   - Development: Use `127.0.0.1` or `localhost`
+   - Production: Use your server's public IP or domain name
+
+5. Security Recommendations:
+   - Never expose the webhook secret
+   - Use HTTPS in production
+   - Configure firewall rules to only allow Jira's IP addresses
+   - Set up rate limiting on your reverse proxy
+
+### Supported Webhook Events
+
+1. Configure your Jira instance to send webhooks to:
+   ```
+   http://your-server:8000/webhook
+   ```
+
+Supported webhook events:
+- `asset.update`: Triggered when an asset is updated in Jira
+- More events coming soon...
+
 ### Asset Processing Rules
 
 When using the `process` command, assets will be updated according to these business rules:
@@ -111,14 +223,4 @@ If you encounter any issues:
 3. Enable debug mode with `--debug` for more detailed logs
 4. Try refreshing the schema cache with `--refresh-cache` if object types have changed
 
-## Testing
 
-Run the test suite:
-```bash
-pytest
-```
-
-Generate test coverage report:
-```bash
-pytest --cov=src tests/
-```

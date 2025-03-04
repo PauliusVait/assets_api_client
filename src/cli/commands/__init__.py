@@ -12,6 +12,7 @@ from .get_command import GetCommand
 from .process_command import ProcessCommand
 from .update_command import UpdateCommand
 from .create_command import CreateCommand  # Add import for the new command
+from .webhook_command import WebhookCommand  # Add import for the webhook command
 
 # Dictionary mapping command names to command classes
 COMMANDS: Dict[str, Type[BaseCommand]] = {
@@ -20,6 +21,7 @@ COMMANDS: Dict[str, Type[BaseCommand]] = {
     'process': ProcessCommand,
     'update': UpdateCommand,
     'create': CreateCommand,  # Register the new command
+    'webhook': WebhookCommand,  # Add webhook command
 }
 
 def register_commands(subparsers) -> None:
