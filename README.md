@@ -22,42 +22,43 @@ A Python client for interacting with the Jira Assets API.
 Retrieve assets by ID:
 ```bash
 # Get a single asset
-python main.py get --id 12345
+python main.py get --id 110653
 
 # Get multiple assets
-python main.py get --ids 12345,12346,12347
+python main.py get --ids 110653,110654
 ```
 
 Update assets:
 ```bash
 # Update a single asset
-python main.py update --id 12345 --attr "name=New Name" --attr "status=Active"
+python main.py update --id 110653 --attr "Name=Test Name" --attr "Status=Active" --attr "Buyout Price=" 
 
-# Update multiple assets with the same attributes
-python main.py update --ids 12345,12346,12347 --attr "status=Active"
-python main.py update --ids 12345,12346 --attr "Name=Test"
+# Update multiple assets 
+python main.py update --ids 110653,110654,110685,110686,110684,110682,110681,110687,110688,110689,110683,110703 --attr "Status=Active" --attr "Name=Test Name" --attr "Buyout Price="
 ```
 
 Create assets:
 ```bash
 # Create a single asset
-python main.py create --type "MacBook" --attributes '{"Name": "Test", "Serial Number": "S0010"}'
+python main.py create --type "MacBook" --attributes '{"Name": "Test Create", "Serial Number": "uniqueSn"}'
 ```
 
 Execute AQL queries:
 ```bash
 python main.py aql --query 'objectType = "iPhone"'
+python main.py aql --query 'objectType = "iPhone" OR objectType = "MacBook"'
+python main.py aql --query 'objectType IN ("iPhone", "MacBook")'
 ```
 
 Enable debug logging:
 ```bash
-python main.py get --id 12345 --debug
+python main.py get --id 110653 --debug
 ```
 
 Process assets with business rules:
 ```bash
 # Process a single asset
-python main.py process --id 12345
+python main.py process --id 110653
 
 # Process multiple assets by ID
 python main.py process --ids 12345,12346,12347
@@ -67,6 +68,7 @@ python main.py process --query 'objectType = "iPhone"'
 
 # Process multiple types of assets
 python main.py process --query 'objectType = "Macbook" OR objectType = "iPhone"'
+python main.py process --query 'objectType IN ("iPhone", "MacBook")' 
 
 # Refresh schema cache when object types have been renamed in Jira
 python main.py process --query 'objectType = "Macbook"' --refresh-cache

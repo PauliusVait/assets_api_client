@@ -4,7 +4,6 @@ Base command infrastructure for the Assets CLI.
 This module provides the foundational abstractions and utilities
 for all command-line interface commands in the Assets CLI.
 """
-import argparse
 from abc import ABC, abstractmethod
 from ..jira_core.asset_client import AssetsClient  
 from ..logging.logger import Logger
@@ -14,24 +13,25 @@ class BaseCommand(ABC):
     """Base class for all CLI commands"""
     
     def __init__(self):
-        """Initialize the base command with empty client and logger"""
+        """Initialize the base command"""
         self.logger = None
         self.client = None
         self.debug = False
-    
+
+    def add_common_arguments(self, parser):
+        """Add arguments common to all commands"""
+        parser.add_argument('--debug', action='store_true', 
+                          help='Enable debug logging')
+        parser.add_argument('--refresh-cache', action='store_true', 
+                          help='Refresh schema cache before processing')
+        return parser
+
     @abstractmethod
     def configure_parser(self, parser):
-        """
-        Configure command-specific arguments.
-        
-        Args:
-            parser: ArgumentParser instance to configure
-            
-        Returns:
-            Configured parser
-        """
-        pass
-    
+        """Configure command-specific arguments"""
+        self.add_common_arguments(parser)
+        return parser
+
     @abstractmethod
     def execute(self, args):
         """
@@ -46,23 +46,20 @@ class BaseCommand(ABC):
         pass
     
     def setup(self, args):
-        """
-        Setup logging and client.
-        
-        Args:
-            args: Parsed command-line arguments with debug and refresh_cache options
-        """
-        # Configure logging
-        self.debug = args.debug if hasattr(args, 'debug') else False
-        log_level = "DEBUG" if self.debug else "INFO"
-        self.logger = Logger.configure(console_level=log_level)
+        """Setup logging and client with common configuration"""
+        # Configure logging once
+        self.debug = getattr(args, 'debug', False)
+        self.logger = Logger.configure(
+            console_level="DEBUG" if self.debug else "INFO"
+        )
         
         # Initialize client
         self.client = AssetsClient()
+        # Set logger after initialization
+        self.client.logger = self.logger
         
         # Handle schema refresh if requested
-        if hasattr(args, 'refresh_cache') and args.refresh_cache:
-            self.logger.info("Refreshing schema cache")
+        if getattr(args, 'refresh_cache', False):
             self.refresh_schema()
     
     def handle_error(self, exception, context=None):

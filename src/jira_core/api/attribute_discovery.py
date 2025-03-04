@@ -29,28 +29,46 @@ def get_object_type_attributes(client, object_type_id: str) -> Dict[str, str]:
         # Use the dedicated endpoint for object type attributes
         url = f"objecttype/{object_type_id}/attributes"
         
-        # This endpoint returns a list of attributes directly, no need for complex params
         response = BaseHandler.make_request(
             client,
             'GET',
-            url
+            url,
+            include_type_attributes=True
         )
         
         attribute_map = {}
         
-        # Process response into a name -> ID mapping
+        # Handle response being either a list or a dict
+        attributes_list = []
         if isinstance(response, list):
-            for attr in response:
-                attr_id = str(attr.get('id', ''))
-                attr_name = attr.get('name', '')
-                if attr_id and attr_name:
-                    attribute_map[attr_name.lower()] = attr_id
-                    client.logger.debug(f"Found attribute: {attr_name} -> {attr_id}")
-            
+            attributes_list = response
+        elif isinstance(response, dict) and 'attributes' in response:
+            attributes_list = response['attributes']
+        
+        # Process list into a name -> ID mapping
+        for attr in attributes_list:
+            if not isinstance(attr, dict):
+                continue
+                
+            # Try multiple paths to get ID and name
+            attr_id = str(attr.get('id', '') or 
+                        attr.get('objectTypeAttributeId', '') or
+                        attr.get('objectTypeAttribute', {}).get('id', ''))
+                        
+            attr_name = (attr.get('name', '') or 
+                        attr.get('objectTypeAttribute', {}).get('name', ''))
+                        
+            if attr_id and attr_name:
+                attribute_map[attr_name.lower()] = attr_id
+                client.logger.debug(f"Found attribute: {attr_name} -> {attr_id}")
+        
+        if attribute_map:
             client.logger.debug(f"Got {len(attribute_map)} attributes from direct endpoint")
-        
+        else:
+            client.logger.warning(f"No attributes found for object type {object_type_id}")
+            
         return attribute_map
-        
+            
     except Exception as e:
         client.logger.error(f"Failed to get attributes for object type {object_type_id}: {str(e)}")
         return {}

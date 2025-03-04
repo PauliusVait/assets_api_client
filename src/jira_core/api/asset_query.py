@@ -11,6 +11,42 @@ from ..models.asset import Asset
 from ..exceptions import InvalidQueryError, SchemaError
 from .base_handler import BaseHandler
 
+def validate_query(query: str) -> str:
+    """
+    Validate and clean up AQL query syntax.
+    
+    Args:
+        query: Raw AQL query string
+        
+    Returns:
+        str: Cleaned and validated query
+        
+    Raises:
+        InvalidQueryError: If query syntax is invalid
+    """
+    # Remove any extra whitespace
+    query = query.strip()
+    
+    # Basic validation for common syntax errors
+    if not query:
+        raise InvalidQueryError("Query cannot be empty")
+        
+    # Balance parentheses count
+    if query.count('(') != query.count(')'):
+        raise InvalidQueryError("Unbalanced parentheses in query")
+    
+    # Validate boolean operators
+    valid_operators = ['AND', 'OR', 'NOT']
+    words = query.upper().split()
+    for word in words:
+        if word in valid_operators and (
+            words.index(word) == 0 or 
+            words.index(word) == len(words) - 1
+        ):
+            raise InvalidQueryError(f"Boolean operator {word} cannot be at the start or end of query")
+            
+    return query
+
 def get_objects_aql(client, query, start_at=0, max_results=50, include_attributes=True):
     """
     Execute AQL query to retrieve assets.
@@ -26,6 +62,9 @@ def get_objects_aql(client, query, start_at=0, max_results=50, include_attribute
         list: List of Asset objects matching the query
     """
     from ..models.asset import Asset
+    
+    # Validate and clean query
+    query = validate_query(query)
     
     # Ensure query has schema filter - constrain query to client's schema
     if 'objectSchemaId' not in query:

@@ -6,7 +6,7 @@ assets according to defined business rules using the Jira Assets API.
 """
 import argparse
 from ..command_base import BaseCommand
-from ..output_formatter import format_asset, format_process_results, format_process_details
+from ..output_formatter import OutputFormatter
 from ...jira_core.services.asset_processor import AssetProcessor
 
 class ProcessCommand(BaseCommand):
@@ -126,13 +126,16 @@ class ProcessCommand(BaseCommand):
             self.logger.info(f"Updated {success_count} out of {len(assets)} assets")
             
             # Show formatted summary table
-            summary = format_process_results(results)
+            summary = OutputFormatter.format_process_results(results)
             self.logger.info(f"\nProcess Summary:\n{summary}")
             
             # Show details for a subset of assets
             if args.details or args.debug:
-                details = format_process_details(results, processed_assets, 
-                                              max_details=args.limit if args.limit else 10)
+                details = OutputFormatter.format_process_details(
+                    results, 
+                    processed_assets,
+                    max_details=args.limit if args.limit else 10
+                )
                 self.logger.info(f"\nProcessed Asset Details:\n{details}")
             
             return True

@@ -54,6 +54,10 @@ class EmptyResultError(AssetsError):
     """
     pass
 
+class ValidationError(AssetsError):
+    """Raised when API response contains validation errors."""
+    pass
+
 class ApiError(Exception):
     """
     Exception raised for API-related errors.

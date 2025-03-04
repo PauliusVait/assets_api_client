@@ -4,6 +4,7 @@ Asset model module for Jira Assets API.
 This module defines the Asset class which represents a Jira asset with
 its attributes and provides methods to process and extract asset data.
 """
+from typing import Any, Dict, Optional
 from .attribute_mapper import AttributeMapper
 
 class Asset:
@@ -17,26 +18,26 @@ class Asset:
     # Create class-level mapper that's shared across all instances
     _mapper = AttributeMapper()
     
-    def __init__(self, raw_data, attribute_definitions=None):
+    def __init__(self, data: Dict[str, Any], attribute_definitions=None):
         """
         Initialize a new Asset instance from API response data.
         
         Args:
-            raw_data (dict): The raw asset data from the API response
+            data (dict): The raw asset data from the API response
             attribute_definitions (dict, optional): Additional attribute definitions
                 to update the mapper cache
         """
-        self.id = raw_data.get('id')
-        self.name = raw_data.get('name')
-        self.object_key = raw_data.get('objectKey')
-        self.object_type = raw_data.get('objectType', {}).get('name')
-        self.created = raw_data.get('created')
-        self.updated = raw_data.get('updated')
+        self.id = str(data.get('id', ''))
+        self.name = data.get('name', '')
+        self.object_key = data.get('objectKey', '')
+        self.object_type = data.get('objectType', {}).get('name', '')
+        self.created = data.get('created', '')
+        self.updated = data.get('updated', '')
         
         # Get attributes either from top-level or nested in objectTypeAttributes
-        attributes = raw_data.get('attributes', [])
-        if not attributes and 'objectTypeAttributes' in raw_data:
-            attributes = raw_data.get('objectTypeAttributes', [])
+        attributes = data.get('attributes', [])
+        if not attributes and 'objectTypeAttributes' in data:
+            attributes = data.get('objectTypeAttributes', [])
         
         # Update the class-level mapper's definitions if provided
         if attribute_definitions:
@@ -44,7 +45,7 @@ class Asset:
             Asset._mapper.trim_cache()  # Call trim_cache after updating the cache
             
         self.attributes = self._process_attributes(attributes)
-        self._raw_data = raw_data
+        self._raw_data = data
 
     def _process_attributes(self, attributes):
         """
@@ -120,6 +121,19 @@ class Asset:
                 value.get('displayValue') or 
                 value.get('searchValue', ''))
 
+    def get_attribute(self, name: str, default: Any = None) -> Any:
+        """
+        Get attribute value by name.
+        
+        Args:
+            name: Attribute name
+            default: Default value if attribute not found
+            
+        Returns:
+            Attribute value or default
+        """
+        return self.attributes.get(name, default)
+
     def to_dict(self):
         """
         Convert the asset to a dictionary representation.
@@ -129,7 +143,7 @@ class Asset:
         """
         return {
             'id': self.id,
-            'name': self.name,
+            'name': self.get_attribute('Name', ''),
             'object_key': self.object_key,
             'type': self.object_type,
             'created': self.created,

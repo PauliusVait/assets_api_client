@@ -10,7 +10,7 @@ from typing import Dict, List, Any
 from ...jira_core.asset_client import AssetsClient
 from ...logging.logger import Logger
 from ..command_base import BaseCommand
-from ..output_formatter import format_asset, format_update_results, format_process_details
+from ..output_formatter import OutputFormatter
 
 class UpdateCommand(BaseCommand):
     """Command handler for updating assets."""
@@ -79,18 +79,18 @@ class UpdateCommand(BaseCommand):
                     self.logger.error(f"Failed to update asset {asset_id}")
                 
                 # Display summary
-                summary = format_update_results(results)
+                summary = OutputFormatter.format_update_results(results)
                 self.logger.info(f"\nUpdate Summary:\n{summary}")
                 
                 # Display asset details table
                 if updated_assets:
-                    details = format_process_details(results, updated_assets)
+                    details = OutputFormatter.format_process_details(results, updated_assets)
                     self.logger.info(f"\nUpdated Asset Details:\n{details}")
                     
                     # Show full details if requested
                     if args.detailed or args.debug:
                         self.logger.info(f"\nFull Asset Details:")
-                        formatted = format_asset(asset)
+                        formatted = OutputFormatter.format_asset(asset)
                         self.logger.info(f"\n{formatted}")
                 
                 return success
@@ -134,12 +134,12 @@ class UpdateCommand(BaseCommand):
                     self.logger.error(f"Failed to update {len(failed_ids)} assets: {failed_ids}")
                 
                 # Display summary of results
-                summary = format_update_results(results)
+                summary = OutputFormatter.format_update_results(results)
                 self.logger.info(f"\nUpdate Summary:\n{summary}")
                 
                 # Display details of updated assets in a table format
                 if updated_assets:
-                    details = format_process_details(results, updated_assets)
+                    details = OutputFormatter.format_process_details(results, updated_assets)
                     self.logger.info(f"\nUpdated Asset Details:\n{details}")
                     
                     # Show full details for each asset if requested
@@ -147,7 +147,7 @@ class UpdateCommand(BaseCommand):
                         self.logger.info("\nFull Asset Details:")
                         for i, asset in enumerate(updated_assets):
                             self.logger.info(f"\nAsset {i+1} of {len(updated_assets)}:")
-                            formatted = format_asset(asset)
+                            formatted = OutputFormatter.format_asset(asset)
                             self.logger.info(f"\n{formatted}")
                 
                 success_count = sum(1 for status in results.values() if status)

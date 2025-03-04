@@ -10,7 +10,7 @@ from typing import Optional
 from ...jira_core.asset_client import AssetsClient
 from ...logging.logger import Logger
 from ..command_base import BaseCommand
-from ..output_formatter import format_query_results, format_asset
+from ..output_formatter import OutputFormatter
 
 class AqlCommand(BaseCommand):
     """Command handler for executing AQL queries."""
@@ -22,8 +22,17 @@ class AqlCommand(BaseCommand):
         Args:
             parser: The parser to configure
         """
-        parser.add_argument('--query', type=str, required=True, 
-                            help='AQL query string (e.g., objectType = "iPhone")')
+        parser.add_argument(
+            '--query',
+            type=str,
+            required=True,
+            help='''AQL query string. Examples:
+            - Single type: objectType = "iPhone"
+            - Multiple types: objectType IN ("iPhone", "MacBook")
+            - Complex query: objectType = "iPhone" AND created > "2024-01-01"
+            - Combined conditions: (objectType = "iPhone" OR objectType = "MacBook") AND status = "Active"
+            '''
+        )
         parser.add_argument('--limit', type=int, default=50,
                            help='Maximum number of results to return (default: 50)')
         parser.add_argument('--offset', type=int, default=0,
@@ -64,7 +73,7 @@ class AqlCommand(BaseCommand):
             self.logger.info(f"Found {len(results)} results")
             
             # Display results summary table
-            formatted = format_query_results(results)
+            formatted = OutputFormatter.format_query_results(results)
             self.logger.info(f"\nQuery Results:\n{formatted}")
             
             # If detailed or debug mode is enabled, show each asset's details
@@ -72,7 +81,7 @@ class AqlCommand(BaseCommand):
                 self.logger.info("\nDetailed Asset Information:")
                 for i, asset in enumerate(results):
                     self.logger.info(f"\nAsset {i+1} of {len(results)}:")
-                    detailed = format_asset(asset)
+                    detailed = OutputFormatter.format_asset(asset)
                     self.logger.info(f"\n{detailed}")
             
             return True

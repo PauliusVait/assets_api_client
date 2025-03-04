@@ -16,6 +16,7 @@ from .api.schema_discovery import discover_schema
 from .api.asset_query import get_objects_aql as get_objects_aql_func
 from .api.asset_retrieval import get_object as get_object_func
 from .api.asset_update import update_object as update_object_func
+from ..logging.logger import Logger
 import re
 
 class AssetsClient(BaseClient):
@@ -35,6 +36,8 @@ class AssetsClient(BaseClient):
                 workspace and schema information. Default is False.
         """
         super().__init__()
+        self.logger = Logger.configure()  # Default logger
+        self.schema_info = {}
         
         # If refresh_cache is True, force rediscovery of workspace and schema
         if refresh_cache:
@@ -56,6 +59,16 @@ class AssetsClient(BaseClient):
             self.schema_info = self._discover_schema()
             self._save_cache()
     
+    @property
+    def logger(self):
+        """Get the logger instance."""
+        return self._logger
+
+    @logger.setter
+    def logger(self, logger):
+        """Set the logger instance."""
+        self._logger = logger
+
     def _discover_workspace(self):
         """
         Discover the workspace ID from Jira Service Management.

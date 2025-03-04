@@ -12,7 +12,7 @@ from ...jira_core.asset_client import AssetsClient
 from ...jira_core.services.asset_creator import AssetCreator
 from ...logging.logger import Logger
 from ..command_base import BaseCommand
-from ..output_formatter import format_asset
+from ..output_formatter import OutputFormatter
 
 class CreateCommand(BaseCommand):
     """Command handler for creating assets."""
@@ -85,7 +85,7 @@ class CreateCommand(BaseCommand):
             # Get the full asset details and display them
             asset = self.client.get_object(asset_id)
             if asset:
-                formatted = format_asset(asset)
+                formatted = OutputFormatter.format_asset(asset)
                 self.logger.info(f"\nCreated asset details:\n{formatted}")
             
             return True

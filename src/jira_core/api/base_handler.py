@@ -6,7 +6,9 @@ to the Jira Assets API, handling errors, and validating responses.
 """
 import requests
 from typing import Optional, Dict, Any, List
-from ..exceptions import AssetNotFoundError, AssetsError, SchemaError, InvalidQueryError
+import json
+from ..exceptions import AssetNotFoundError, AssetsError, SchemaError, InvalidQueryError, ApiError, ValidationError
+from .response_validator import ResponseValidator
 
 class BaseHandler:
     """
@@ -20,6 +22,36 @@ class BaseHandler:
         'attributeNames': '*',
         'expand': 'attributes,objectType,attributeValues'
     }
+    
+    @staticmethod
+    def handle_response(response, logger=None):
+        """Process API response and handle any errors."""
+        try:
+            # Get response body
+            response_data = response.json()
+            
+            # Skip validation for array responses
+            if isinstance(response_data, list):
+                return response_data
+                
+            # Validate dict responses
+            ResponseValidator.validate_response(response_data, logger)
+            
+            return response_data
+            
+        except json.JSONDecodeError:
+            error_msg = f"Invalid JSON response from API (status {response.status_code})"
+            if logger:
+                logger.error(error_msg)
+            raise ApiError(error_msg)
+        except ValidationError as e:
+            # Pass through validation errors
+            raise
+        except Exception as e:
+            error_msg = f"Error processing API response: {str(e)}"
+            if logger:
+                logger.error(error_msg)
+            raise ApiError(error_msg)
     
     @staticmethod
     def make_request(
@@ -110,6 +142,24 @@ class BaseHandler:
             
             client.logger.debug(f"Response status: {response.status_code}")
             
+            if response.status_code == 400:
+                try:
+                    error_data = response.json()
+                    # Try validation first
+                    try:
+                        ResponseValidator.validate_response(error_data, client.logger)
+                    except ValidationError as ve:
+                        raise
+                    except:
+                        # Fall back to generic error handling
+                        error_msg = ResponseValidator.extract_error_details(error_data)
+                        raise AssetsError(error_msg)
+                        
+                except ValidationError:
+                    raise
+                except Exception as e:
+                    raise AssetsError(f"Bad request: {str(e)}")
+            
             # For successful responses, log more details for debugging
             if response.status_code >= 200 and response.status_code < 300:
                 try:
@@ -183,7 +233,7 @@ class BaseHandler:
                     raise AssetsError(error_msg)
                     
             response.raise_for_status()
-            data = response.json()
+            data = BaseHandler.handle_response(response, client.logger)
             
             # Check for empty results
             if method.upper() == 'POST' and 'aql' in endpoint:
