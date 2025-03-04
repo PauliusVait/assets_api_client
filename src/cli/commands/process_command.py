@@ -87,6 +87,13 @@ class ProcessCommand(BaseCommand):
                         assets.append(asset)
                     else:
                         self.logger.warning(f"Asset with ID {asset_id} not found")
+            elif args.id:
+                # Handle single asset ID case
+                self.logger.info(f"Processing asset with ID: {args.id}")
+                asset = self.client.get_object(args.id)
+                assets = [asset] if asset else []
+                if not assets:
+                    self.logger.warning(f"Asset with ID {args.id} not found")
             else:
                 self.logger.error("No query or IDs provided")
                 return False
