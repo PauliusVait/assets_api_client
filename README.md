@@ -86,19 +86,19 @@ requirements.txt: Project dependencies
 Retrieve assets by ID:
 ```bash
 # Get a single asset
-python main.py get --id 110653
+python main.py get --id 110685
 
 # Get multiple assets
-python main.py get --ids 110653,110654
+python main.py get --ids 110685,110686
 ```
 
 Update assets:
 ```bash
 # Update a single asset
-python main.py update --id 110653 --attr "Name=Test Name" --attr "Status=Active" --attr "Buyout Price=" 
+python main.py update --id 110685 --attr "Name=Test Name" --attr "Status=Active" --attr "Buyout Price=" 
 
 # Update multiple assets 
-python main.py update --ids 110653,110654,110685,110686,110684,110682,110681,110687,110688,110689,110683,110703 --attr "Status=Active" --attr "Name=Test Name" --attr "Buyout Price="
+python main.py update --ids 110685,110686 --attr "Status=Active" --attr "Name=Test Name" --attr "Buyout Price="
 ```
 
 Create assets:
@@ -122,10 +122,10 @@ python main.py get --id 110653 --debug
 Process assets with business rules:
 ```bash
 # Process a single asset
-python main.py process --id 110653
+python main.py process --id 110685
 
 # Process multiple assets by ID
-python main.py process --ids 12345,12346,12347
+python main.py process --ids 110685,110686
 
 # Process assets using an AQL query
 python main.py process --query 'objectType = "iPhone"'
@@ -186,8 +186,7 @@ The application supports webhooks for real-time processing of asset updates.
    ```
 
 Supported webhook events:
-- `asset.update`: Triggered when an asset is updated in Jira
-- More events coming soon...
+- nothing yet!
 
 ### Asset Processing Rules
 

@@ -53,14 +53,13 @@ class BaseCommand(ABC):
             console_level="DEBUG" if self.debug else "INFO"
         )
         
-        # Initialize client
-        self.client = AssetsClient()
-        # Set logger after initialization
-        self.client.logger = self.logger
-        
-        # Handle schema refresh if requested
-        if getattr(args, 'refresh_cache', False):
-            self.refresh_schema()
+        # Initialize client with our logger and handle refresh cache
+        refresh_cache = getattr(args, 'refresh_cache', False)
+        self.client = AssetsClient(logger=self.logger, refresh_cache=refresh_cache)
+
+        # Remove redundant schema refresh since it's now handled in AssetsClient init
+        if refresh_cache:
+            self.logger.debug("Schema refresh handled during client initialization")
     
     def handle_error(self, exception, context=None):
         """

@@ -19,14 +19,14 @@ class BaseClient:
     This class handles authentication, configuration loading from environment
     variables, and caching of workspace and schema information.
     """
-    def __init__(self):
+    def __init__(self, logger=None):
         """
         Initialize a new BaseClient instance.
         
-        Loads configuration from environment variables, sets up authentication,
-        and initializes caching.
+        Args:
+            logger: Optional Logger instance. If not provided, a new one will be created.
         """
-        self.logger = Logger()
+        self.logger = logger or Logger()
         self.schema_info = None  # Will be populated with schema ID and object types
         load_dotenv()
         self.email = os.getenv('JIRA_EMAIL')

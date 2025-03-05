@@ -27,21 +27,20 @@ class AssetsClient(BaseClient):
     the Jira Assets API, including workspace and schema discovery,
     asset querying, and asset updates.
     """
-    def __init__(self, refresh_cache=False):
+    def __init__(self, logger=None, refresh_cache=False):
         """
         Initialize a new AssetsClient instance.
         
         Args:
+            logger: Optional Logger instance to use
             refresh_cache (bool, optional): Whether to force refresh of cached
                 workspace and schema information. Default is False.
         """
-        super().__init__()
-        self.logger = Logger.configure()  # Default logger
-        self.schema_info = {}
+        super().__init__(logger=logger)
         
         # If refresh_cache is True, force rediscovery of workspace and schema
         if refresh_cache:
-            self.logger.info("Forced cache refresh requested")
+            self.logger.debug("Forced cache refresh requested")
             self.workspace_id = None
             self.schema_info = {}
             self._save_cache()
@@ -53,8 +52,8 @@ class AssetsClient(BaseClient):
 
         self.base_url = f"https://api.atlassian.com/jsm/assets/workspace/{self.workspace_id}/v1"
         
-        # Use cached schema_info if available
-        if not self.schema_info or refresh_cache:
+        # Use cached schema_info if available and not forcing refresh
+        if not self.schema_info:
             self.logger.info("Refreshing schema information from API")
             self.schema_info = self._discover_schema()
             self._save_cache()
