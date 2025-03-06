@@ -1,6 +1,5 @@
 from typing import Dict, Type
 from .webhook_base import WebhookHandler
-from .handlers.asset_update_handler import AssetUpdateWebhookHandler
 from ..logging.logger import Logger
 
 class WebhookRouter:
@@ -9,7 +8,6 @@ class WebhookRouter:
     def __init__(self):
         self.logger = Logger()
         self.handlers: Dict[str, Type[WebhookHandler]] = {
-            'asset.update': AssetUpdateWebhookHandler(),
             # Add more handlers here as needed
         }
 
